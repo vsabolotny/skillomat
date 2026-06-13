@@ -1,0 +1,11 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Env files (each app keeps its own .env locally; never commit real secrets)
+.env
+.env.*
+!.env.example
