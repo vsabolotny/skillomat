@@ -14,7 +14,7 @@ backend and web skeletons. No marketplace domain logic exists yet.
 | `backend/`  | PHP 8.4, Laravel 13                | HTTP API, served by nginx + php-fpm      |
 | `web/`      | React 19, Vite, TypeScript         | Single-page app that consumes the API    |
 | `infra/`    | (placeholder)                      | AWS IaC, deferred to a later ticket      |
-| `docs/`     | Markdown                           | Specs (`docs/superpowers/specs/`) and KB |
+| `documentation/` | Markdown                      | Specs (`documentation/specs/`) and KB (`documentation/kb/`) |
 
 The mobile app (React Native) and cloud deployment (AWS/CloudFront) are not yet
 in the repo.
