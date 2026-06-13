@@ -5,6 +5,13 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Dependencies & build output
+# (each app also ignores these locally; kept here as a repo-wide safety net)
+node_modules/
+vendor/
+dist/
+build/
+
 # Env files (each app keeps its own .env locally; never commit real secrets)
 .env
 .env.*

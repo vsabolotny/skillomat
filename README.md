@@ -8,7 +8,7 @@ or hosts hire or barter for it on the spot.
 > **This repository is the initial setup (MOB-1).** It contains the monorepo
 > foundation plus runnable skeletons for the backend and web, wired together with
 > Docker Compose. There is no product functionality yet — see
-> [`docs/superpowers/specs/2026-06-13-skillomat-initial-setup-design.md`](docs/superpowers/specs/2026-06-13-skillomat-initial-setup-design.md).
+> [`documentation/specs/2026-06-13-skillomat-initial-setup-design.md`](documentation/specs/2026-06-13-skillomat-initial-setup-design.md).
 
 ## Repository layout
 
@@ -16,8 +16,8 @@ or hosts hire or barter for it on the spot.
 | ----------- | ----------------------------------------------------------------- |
 | `backend/`  | Laravel API (PHP 8.4) + MySQL, served by nginx + php-fpm          |
 | `web/`      | React SPA (Vite + TypeScript) that consumes the API               |
-| `infra/`    | Infrastructure-as-code placeholder (AWS, deferred)                |
-| `docs/`     | Specs and project documentation                                   |
+| `infra/`         | Infrastructure-as-code placeholder (AWS, deferred)           |
+| `documentation/` | Specs (`specs/`) and the knowledge base (`kb/`)              |
 
 The mobile app (React Native) and AWS deployment are future tickets.
 

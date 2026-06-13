@@ -34,8 +34,9 @@ skillomat/
 ├── backend/                  # Laravel app (PHP 8.4) + Dockerfile (nginx + php-fpm)
 ├── web/                      # Vite + React + TypeScript SPA + Dockerfile
 ├── infra/                    # README placeholder for AWS IaC (Terraform) — deferred
-├── docs/
-│   └── superpowers/specs/    # this design doc lives here
+├── documentation/
+│   ├── specs/                # design docs (this file)
+│   └── kb/                   # knowledge base
 ├── .github/workflows/ci.yml  # lint + test for both stacks
 ├── docker-compose.yml        # mysql + backend + web
 ├── .gitignore
