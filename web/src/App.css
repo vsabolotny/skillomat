@@ -1,0 +1,37 @@
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+.app h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.tagline {
+  color: #6b7280;
+  margin-bottom: 2rem;
+}
+
+.health {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.health--loading {
+  color: #6b7280;
+}
+
+.health--connected {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.health--unreachable {
+  color: #b91c1c;
+  background: #fef2f2;
+}
