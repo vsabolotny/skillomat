@@ -21,6 +21,12 @@ jobs:
           coverage: none
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare environment
+        # Generate an app key at runtime; the password-reset broker hashes its
+        # tokens with it. The key is never committed (no hardcoded test secret).
+        run: |
+          cp .env.example .env
+          php artisan key:generate
       - name: Lint (Pint)
         run: vendor/bin/pint --test
       - name: Tests (PHPUnit)
