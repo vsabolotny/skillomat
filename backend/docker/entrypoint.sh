@@ -3,14 +3,17 @@ set -e
 
 cd /var/www/html
 
-# Ensure an environment file exists.
-if [ ! -f .env ]; then
-    cp .env.example .env
-fi
-
-# Generate the application key on first boot.
-if ! grep -q '^APP_KEY=base64:' .env; then
-    php artisan key:generate --force
+# In production all config is supplied via the environment (see
+# docker-compose.prod.yml), including a pinned APP_KEY — skip the dev-only .env
+# bootstrap so we never write a throwaway key or local defaults. Locally (no
+# APP_KEY in the environment) keep the convenient first-boot flow.
+if [ -z "${APP_KEY:-}" ]; then
+    if [ ! -f .env ]; then
+        cp .env.example .env
+    fi
+    if ! grep -q '^APP_KEY=base64:' .env; then
+        php artisan key:generate --force
+    fi
 fi
 
 # Wait for the database to accept connections.
@@ -25,7 +28,13 @@ echo "MySQL is up."
 # Apply migrations (proves write connectivity; no-op once applied).
 php artisan migrate --force
 
-# Refresh caches.
-php artisan config:clear
+# Refresh caches. In production, cache config + routes for performance (safe
+# because every value comes from the environment); in dev, clear stale caches.
+if [ "${APP_ENV:-local}" = "production" ]; then
+    php artisan config:cache
+    php artisan route:cache
+else
+    php artisan config:clear
+fi
 
 exec "$@"

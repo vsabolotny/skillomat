@@ -2,15 +2,25 @@
 
 Infrastructure-as-code for Skillomat.
 
-**Status: placeholder.** Local development runs entirely through the root
-[`docker-compose.yml`](../docker-compose.yml) — there is no cloud infrastructure
-in this ticket (MOB-1).
+Local development runs entirely through the root
+[`docker-compose.yml`](../docker-compose.yml).
+
+## Production (MOB-3) — single EC2 host + S3/CloudFront
+
+The first public deployment is **not** Terraform — it is a lean, manually
+provisioned MVP: one EC2 host runs the Laravel API + MySQL via
+[`docker-compose.prod.yml`](../docker-compose.prod.yml), the React build lives in S3,
+and a single CloudFront distribution fronts both (`default → S3`, `/api/* → EC2`).
+Deploys are driven by the `deploy-web` / `deploy-backend` GitHub Actions workflows.
+
+Full architecture, the one-time AWS console runbook, and the GitHub secrets list:
+[`documentation/specs/2026-06-18-MOB-3-aws-cloudfront-deploy.md`](../documentation/specs/2026-06-18-MOB-3-aws-cloudfront-deploy.md).
+
+The host-side config lives in [`deploy/`](../deploy) (`ec2-bootstrap.sh`,
+`smoke-tests.sh`).
 
 ## Planned (later tickets)
 
-- **AWS** provisioning via Terraform (VPC, RDS for MySQL, ECS/Fargate or EC2 for
-  the Laravel backend, S3 + CloudFront for the React web build).
-- CloudFront distribution and, later, a custom domain.
-- CI/CD wiring to deploy from GitHub.
-
-When that work starts, Terraform modules live here (e.g. `infra/terraform/`).
+- Terraform/IaC for the resources currently created by hand.
+- RDS for MySQL, ALB/ECS as the host outgrows a single box, a custom domain
+  (Route 53 + ACM), and CloudWatch alarms.
