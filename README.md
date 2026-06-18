@@ -16,10 +16,13 @@ or hosts hire or barter for it on the spot.
 | ----------- | ----------------------------------------------------------------- |
 | `backend/`  | Laravel API (PHP 8.4) + MySQL, served by nginx + php-fpm          |
 | `web/`      | React SPA (Vite + TypeScript) that consumes the API               |
-| `infra/`         | Infrastructure-as-code placeholder (AWS, deferred)           |
+| `infra/`         | Cloud/deploy notes — see [`infra/README.md`](infra/README.md) |
+| `deploy/`        | Host-side deploy scripts (EC2 bootstrap, smoke tests)        |
 | `documentation/` | Specs (`specs/`) and the knowledge base (`kb/`)              |
 
-The mobile app (React Native) and AWS deployment are future tickets.
+The mobile app (React Native) is a future ticket. AWS deployment (EC2 + S3 +
+CloudFront) is wired up in MOB-3 — see
+[`documentation/specs/2026-06-18-MOB-3-aws-cloudfront-deploy.md`](documentation/specs/2026-06-18-MOB-3-aws-cloudfront-deploy.md).
 
 ## Tech stack
 

@@ -1,0 +1,81 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_DEPLOY_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_DEPLOY_SECRET_KEY }}
+          aws-region: eu-central-1
+
+      - name: Deploy via SSM Send-Command
+        run: |
+          set -euo pipefail
+
+          # On the host: pull main, rebuild the image, restart the stack. The
+          # backend entrypoint runs `migrate --force` and caches config on boot;
+          # the host /opt/skillomat/.env feeds compose variable substitution.
+          # Build with the daemon's integrated BuildKit (DOCKER_BUILDKIT=1
+          # docker build) rather than `compose build`: AL2023 doesn't ship the
+          # standalone buildx CLI plugin that `compose build` requires.
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "deploy-backend ${GITHUB_SHA::7}" \
+            --timeout-seconds 1500 \
+            --parameters '{"commands":["set -euxo pipefail","cd /opt/skillomat","git fetch --all --prune","git reset --hard origin/main","DOCKER_BUILDKIT=1 docker build -t skillomat-backend:local ./backend","docker compose -f docker-compose.prod.yml up -d","sleep 15","curl -fsS --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1/api/health","docker image prune -f"],"executionTimeout":["1500"]}' \
+            --query 'Command.CommandId' --output text)
+
+          echo "CommandId: $CMD_ID"
+
+          # Poll until terminal state (image build can be slow).
+          for i in $(seq 1 150); do
+            sleep 10
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" \
+              --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+              --query 'Status' --output text 2>/dev/null || echo "Pending")
+            echo "[$i] Status: $STATUS"
+            case "$STATUS" in
+              Success) break ;;
+              Failed|Cancelled|TimedOut) FINAL=fail; break ;;
+            esac
+          done
+
+          echo "----- STDOUT -----"
+          aws ssm get-command-invocation --command-id "$CMD_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+            --query 'StandardOutputContent' --output text
+
+          echo "----- STDERR -----"
+          aws ssm get-command-invocation --command-id "$CMD_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+            --query 'StandardErrorContent' --output text
+
+          if [ "${FINAL:-ok}" = "fail" ] || [ "$STATUS" != "Success" ]; then
+            echo "Deploy failed with status: $STATUS"
+            exit 1
+          fi
+
+      - name: Smoke test
+        env:
+          BASE_URL: ${{ secrets.CLOUDFRONT_URL }}
+          SMOKE_CHECKS: frontend,api_health
+        run: bash deploy/smoke-tests.sh

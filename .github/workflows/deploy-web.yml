@@ -1,0 +1,59 @@
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # The SPA calls the API at the relative path /api, so no API URL is needed
+      # at build time — CloudFront routes /api/* to the EC2 origin.
+      - name: Build
+        run: npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_DEPLOY_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_DEPLOY_SECRET_KEY }}
+          aws-region: eu-central-1
+
+      - name: Sync to S3
+        run: aws s3 sync dist/ "s3://${{ secrets.S3_BUCKET }}/" --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
+
+      - name: Smoke test (frontend)
+        working-directory: ${{ github.workspace }}
+        env:
+          # A web-only deploy doesn't touch the backend; skip the API check so we
+          # don't race a parallel deploy-backend run.
+          BASE_URL: ${{ secrets.CLOUDFRONT_URL }}
+          SMOKE_CHECKS: frontend
+        run: bash deploy/smoke-tests.sh
