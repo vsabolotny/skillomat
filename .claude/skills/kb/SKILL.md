@@ -19,7 +19,7 @@ Keeps `documentation/kb/` in sync with the codebase after each PR merge. Run aft
 
 - **After every PR merge** (Step 9 of the push pipeline).
 - **After a batch of changes** that were pushed outside the push pipeline.
-- **`full` mode**: when the KB is known stale (new Alembic models, large refactor, or KB hasn't been updated in >3 PRs).
+- **`full` mode**: when the KB is known stale (new migrations, large refactor, or KB hasn't been updated in >3 PRs).
 
 ## When NOT to run
 
@@ -41,12 +41,12 @@ git log --oneline --format="%H %s" | grep -v "^.*docs(kb)" | head -1
 ```
 
 Classify changes into buckets:
-- `MODELS` — any `backend/app/models/*.py` changed
-- `ROUTES` — any `backend/app/api/*.py` changed
-- `FRONTEND` — any `web/src/components/cards/*.tsx` or `web/src/pages/*.tsx` changed
-- `SERVICES` — any `backend/app/services/*.py` or `backend/app/tasks/*.py` changed
+- `MODELS` — any `backend/app/Models/*.php` changed
+- `ROUTES` — any `backend/routes/*.php` changed
+- `FRONTEND` — any `web/src/components/**/*.tsx` or `web/src/pages/**/*.tsx` changed
+- `SERVICES` — any `backend/app/Services/*.php` or `backend/app/Http/Controllers/*.php` changed
 - `FEATURE` — any new card/page/service or a PR with `feat(...)` commit prefix
-- `OPS` — any `.github/workflows/*.yml` or `deploy/*.sh` or `backend/app/config.py` changed
+- `OPS` — any `.github/workflows/*.yml` or `deploy/*.sh` or `backend/config/*.php` changed
 - `DECISION` — PR description or commit message explicitly calls out an architectural decision
 
 If no files match any bucket (pure docs/config change): **print one line and exit** — "No code changes detected; KB is current."
@@ -59,30 +59,22 @@ Run the code-extraction scripts and replace the relevant sections in `documentat
 
 **Schema snapshot** (run if MODELS bucket triggered):
 ```bash
-python3 << 'PYEOF'
-import os, re
-base = 'backend/app/models'
-for fname in sorted(os.listdir(base)):
-    if not fname.endswith('.py') or fname.startswith('_'): continue
-    src = open(f'{base}/{fname}').read()
-    tbl = re.search(r'__tablename__\s*=\s*["\'](\w+)["\']', src)
-    if not tbl: continue
-    print(f'-- {tbl.group(1)}')
-    for m in re.finditer(r'(\w+)\s*=\s*Column\(([^)]+)\)', src):
-        print(f'  {m.group(1)}: {m.group(2)[:70]}')
-    print()
-PYEOF
+# Use Laravel's built-in model:show for each Eloquent model (run from backend/).
+cd backend
+for model in $(find app/Models -name "*.php" -exec basename {} .php \;); do
+    php artisan model:show "App\\Models\\$model"
+done
 ```
 
 **API routes** (run if ROUTES bucket triggered):
 ```bash
-grep -rn "@router\." backend/app/api/ | grep -v __pycache__ | sort
-# Then map with router prefix from APIRouter(prefix=...) declaration in each file
+# Laravel's route:list gives a clean, accurate registered-route table (run from backend/).
+cd backend && php artisan route:list --path=api --columns=method,uri,name,action
 ```
 
 **Frontend components** (run if FRONTEND bucket triggered):
 ```bash
-find web/src -name "*.tsx" \( -path "*/pages/*" -o -path "*/cards/*" \) | sort
+find web/src -name "*.tsx" \( -path "*/pages/*" -o -path "*/components/*" \) | sort
 ```
 
 Replace the corresponding sections in ARCHITECTURE.md. Update the `<!-- Last updated: -->` header line.

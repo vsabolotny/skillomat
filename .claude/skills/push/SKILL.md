@@ -17,7 +17,7 @@ Automated pre-push quality gate. Runs a full pipeline before pushing code to rem
 2. Identify the current branch and remote tracking branch.
 3. Read the project's README.md (root level).
 4. Scan for CLAUDE.md, MEMORY.md, CHANGELOG.md, and any documentation directory.
-5. Detect the project type (check for package.json, requirements.txt, Cargo.toml, go.mod, etc.) and test infrastructure (pytest, jest, vitest, cargo test, go test, etc.).
+5. Detect the project type (check for package.json, requirements.txt, composer.json, Cargo.toml, go.mod, etc.) and test infrastructure (pytest, jest, vitest, phpunit, pest, cargo test, go test, etc.).
 
 ### Step 2 — Update README
 
@@ -200,7 +200,7 @@ Use ONLY when Step 8a confirmed every path is under `docs/**`.
 8. **Sync local base branch:** after a successful merge, `git checkout <base-branch> && git pull --ff-only` so the local working tree matches remote. The merge happened on the server; the user will expect their local checkout to reflect it on the next command.
 9. **Update knowledge graph (incremental) — MANDATORY when source code changed.**
 
-   a. **Decide if a refresh is needed.** Skip ONLY if every PR-touched path is under `docs/**`, `documentation/**`, `.claude/**`, or pure config (yaml/toml/json/lockfiles with no `.py`/`.ts`/`.tsx`/`.js`/`.jsx`/`.go`/etc. siblings). For ANY source-code touch in the PR, the refresh is required — not optional, not "skip if context is tight". This is the load-bearing step that keeps `.understand-anything/` from drifting silently across merges.
+   a. **Decide if a refresh is needed.** Skip ONLY if every PR-touched path is under `docs/**`, `documentation/**`, `.claude/**`, or pure config (yaml/toml/json/lockfiles with no `.py`/`.ts`/`.tsx`/`.js`/`.jsx`/`.go`/`.php`/etc. siblings). For ANY source-code touch in the PR, the refresh is required — not optional, not "skip if context is tight". This is the load-bearing step that keeps `.understand-anything/` from drifting silently across merges.
 
    b. **Run `/understand`** (incremental — ~$0.30–0.80). The skill auto-detects the existing graph and re-analyses only drifted files. Do NOT pass `--full` here; full re-runs cost ~$2.50–3.00 and are warranted only when the architecture changes materially (new service layer, major model restructure, large file moves) — always ask the user before a full run.
 
