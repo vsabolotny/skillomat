@@ -1,6 +1,6 @@
 # Decisions
 
-<!-- Last updated: 2026-06-13 (PR #1) -->
+<!-- Last updated: 2026-06-18 (PR #5) -->
 
 Architectural decisions, newest at the bottom.
 
@@ -64,3 +64,25 @@ PR into.
 Why: preserve the feature-branch + PR review flow even for the first ticket.
 Impact: `main` was seeded with an empty root commit; the scaffold landed via PR #1.
 All subsequent work uses the standard `feature/<TICKET>-<slug>` → PR flow.
+
+## Single CloudFront distribution fronts both tiers (MOB-3)
+
+Context: the app must be public at a `*.cloudfront.net` URL (no domain yet); the SPA
+calls the API at the relative path `/api` and uses Sanctum Bearer tokens.
+Why: putting web (S3) and API (EC2) behind **one** CloudFront domain
+(`default → S3`, `/api/* → EC2`) keeps the SPA's API calls same-origin, so there is
+no CORS/CSRF setup and nothing to reconfigure when the CloudFront domain is created.
+Impact: `docker-compose.prod.yml` + two GitHub Actions deploy workflows; the EC2
+security group allows `:80` only from the CloudFront prefix list.
+
+## Lean single-EC2 AWS MVP, provisioned manually (MOB-3)
+
+Context: first production deploy on a tight budget, no custom domain.
+Why: one `t3.small` running `docker compose` (backend + MySQL) plus S3/CloudFront is
+~€30/mo and ships in a day; RDS/ALB/ECS/Terraform are deferred until the single host
+is outgrown. Backend deploys use AWS SSM `send-command` (keyless — no SSH key in CI,
+no inbound `:22`); the image builds with daemon-integrated BuildKit
+(`DOCKER_BUILDKIT=1 docker build`) because AL2023 lacks the buildx plugin that
+`compose build` requires.
+Impact: AWS resources are created by hand per the MOB-3 runbook (not IaC); `APP_KEY`
+is pinned in the host `.env` and never regenerated on deploy.
