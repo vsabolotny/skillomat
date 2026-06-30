@@ -47,6 +47,18 @@ services:
       DB_DATABASE: ${DB_DATABASE:-skillomat}
       DB_USERNAME: ${DB_USERNAME:-skillomat}
       DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in the host .env}
+      # Transactional email (MOB-7). Defaults to 'log' so a host that hasn't set up
+      # SES still boots; set MAIL_MAILER=ses in the host .env to actually deliver.
+      # See documentation/kb/OPERATIONS.md → "Email (SES)" for the one-time setup.
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Skillomat}
+      # SES region. The AWS keys are left empty by default so the SDK falls back to
+      # the EC2 instance role (no stored mail secret); populate them only on the
+      # static-IAM-user fallback path.
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-central-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
     ports:
       # CloudFront's EC2 origin talks HTTP to host :80; nothing else can reach it
       # (security group allows :80 only from the CloudFront prefix list).
