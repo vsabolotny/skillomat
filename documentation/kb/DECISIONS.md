@@ -1,6 +1,6 @@
 # Decisions
 
-<!-- Last updated: 2026-06-18 (PR #5) -->
+<!-- Last updated: 2026-06-30 (PR #7) -->
 
 Architectural decisions, newest at the bottom.
 
@@ -86,3 +86,19 @@ no inbound `:22`); the image builds with daemon-integrated BuildKit
 `compose build` requires.
 Impact: AWS resources are created by hand per the MOB-3 runbook (not IaC); `APP_KEY`
 is pinned in the host `.env` and never regenerated on deploy.
+
+## AWS SES (via IAM instance role) for transactional email (MOB-7)
+
+Context: transactional email — currently just the MOB-2 password-reset link — must be
+delivered in production; the `log` driver only writes it to `storage/logs`.
+Why: SES is native to the existing all-AWS stack (EC2/S3/CloudFront/IAM) and gives the
+best deliverability (Easy DKIM + SPF) without a new vendor. The EC2 host authenticates
+to SES through its **IAM instance role**, so no long-lived mail secret is stored
+anywhere — the AWS SDK reads instance-metadata credentials (static IAM-user keys are a
+documented fallback only). SES region = the host region (`eu-central-1`); identities
+are per-region.
+Impact: `aws/aws-sdk-php` is a runtime dependency (Laravel's `ses` mailer needs it);
+`docker-compose.prod.yml` passes `MAIL_*`/`AWS_*` (keys empty by default → instance
+role). `MAIL_MAILER` defaults to `log` so a host without SES still boots; flip to `ses`
+only after the one-time SES setup in OPERATIONS.md → "Email (SES)". AWS/SES is not yet
+provisioned, so this landed as code + config + runbook, not a live deploy.
