@@ -78,4 +78,42 @@ gitignored) and consumed by `docker-compose.prod.yml` variable substitution — 
 baked into the image. `APP_ENV=production`, `APP_DEBUG=false`, and `APP_KEY` is
 **generated once and pinned** (never regenerated on deploy). The backend entrypoint
 caches config + routes when `APP_ENV=production`. Additional prod vars:
-`APP_URL` / `APP_FRONTEND_URL` (the CloudFront URL), `DB_ROOT_PASSWORD`.
+`APP_URL` / `APP_FRONTEND_URL` (the CloudFront URL), `DB_ROOT_PASSWORD`, and the
+mail vars below.
+
+### Email (SES) — MOB-7
+
+Production transactional email (currently just the MOB-2 password-reset link) is sent
+through **AWS SES**. Until SES is provisioned the host keeps `MAIL_MAILER=log`, which
+writes emails to `storage/logs` instead of delivering them. The app code is already
+wired (`aws/aws-sdk-php` + the `ses` mailer in `config/mail.php`); the remaining work is
+a one-time AWS setup the operator does by hand. Region must match `AWS_DEFAULT_REGION`
+(default `eu-central-1`, the EC2 host region) — SES identities are per-region.
+
+One-time provisioning:
+
+1. **Verify a sender identity** in SES (`eu-central-1`). With no custom domain yet,
+   verify a single email address; click the confirmation link SES emails you. Set
+   `MAIL_FROM_ADDRESS` in the host `/opt/skillomat/.env` to that exact address.
+2. **DKIM + SPF.** If/when a domain is verified, enable Easy DKIM (add the 3 CNAME
+   records SES gives you) and an SPF TXT record (`v=spf1 include:amazonses.com ~all`)
+   so mail isn't spam-filtered. A bare verified email address skips DNS but has weaker
+   deliverability.
+3. **Leave the sandbox.** New SES accounts can only send to verified addresses — request
+   production access to send to anyone.
+4. **Grant send permission.**
+   - *Preferred — IAM instance role (no stored secret):* attach a policy allowing
+     `ses:SendEmail` + `ses:SendRawEmail` to the EC2 instance profile, and leave
+     `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` **unset** in the host `.env`. The AWS
+     SDK reads credentials from instance metadata.
+   - *Fallback — static IAM user:* create a dedicated SES user with the same policy and
+     put its keys in the host `.env`. Long-lived secret to rotate; only use if an
+     instance role isn't an option.
+5. **Flip the switch.** Set `MAIL_MAILER=ses` in the host `.env` and
+   `docker compose -f docker-compose.prod.yml up -d backend`.
+
+Smoke test from the host:
+`docker compose -f docker-compose.prod.yml exec backend php artisan tinker`
+→ `Password::sendResetLink(['email' => '<a-verified-address>']);`
+Confirm the email arrives (check spam) with the reset link pointing at the CloudFront
+SPA `/reset-password` route.
