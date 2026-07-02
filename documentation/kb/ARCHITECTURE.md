@@ -1,6 +1,6 @@
 # Architecture
 
-<!-- Last updated: 2026-06-13 (PR #1) -->
+<!-- Last updated: 2026-07-02 (PR #8) -->
 
 Skillomat is a marketplace where travelers offer their skills for money, goods,
 stays, or experiences. This document describes the **current** state of the
@@ -44,9 +44,19 @@ MySQL responds to `SELECT 1`, or `{"status":"degraded","database":"unreachable"}
 
 ## Web (React + Vite)
 
-- **Entry:** `web/src/main.tsx` → `web/src/App.tsx`.
+- **Entry:** `web/src/main.tsx` — `BrowserRouter` + `AuthProvider` wrap the routes.
+- **Routes / pages** (`web/src/pages/`):
+  - `/` → `LandingPage.tsx` — marketing landing page (hero, skill-category bento,
+    how-it-works, trending nomads, CTA, footer, mobile bottom nav). Built in plain
+    CSS (`LandingPage.css`, design tokens as scoped variables) with inline-SVG
+    icons (`LandingIcons.tsx`) and static content (`landingContent.ts`). The top
+    bar is auth-aware via `useAuth`. Signed-out CTAs point to `/register` / `/login`.
+  - `/login`, `/register`, `/forgot-password`, `/reset-password`,
+    `/auth/google/callback` — auth pages; shared styles in `pages/auth.css`.
 - **Components:** `web/src/components/HealthStatus.tsx` fetches `/api/health` on
-  mount and renders a status badge (`loading` / `connected` / `unreachable`).
+  mount and renders a status badge (`loading` / `connected` / `unreachable`),
+  styled by `HealthStatus.css`. It is a reusable component, no longer mounted on
+  the home route.
 - **API access:** Vite dev server proxies `/api/*` to the backend
   (`VITE_API_PROXY`, default `http://localhost:8080`). See `web/vite.config.ts`.
 

@@ -1,13 +1,14 @@
 # Features
 
-<!-- Last updated: 2026-06-30 (PR #7) -->
+<!-- Last updated: 2026-07-02 (PR #8) -->
 
 ## Live features
 
 | Feature              | PR  | Key files                                                                                  | Notes                                                                 |
 | -------------------- | --- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
 | Health check API     | #1 (MOB-1) | `backend/routes/api.php`, `backend/app/Http/Controllers/HealthController.php`        | `GET /api/health` pings MySQL; returns status + DB connectivity      |
-| Web health status    | #1 (MOB-1) | `web/src/App.tsx`, `web/src/components/HealthStatus.tsx`                             | Landing page shows a green/red badge for backend+DB reachability     |
+| Web health status    | #1 (MOB-1) | `web/src/components/HealthStatus.tsx`, `web/src/components/HealthStatus.css`          | Reusable green/red badge for backend+DB reachability (no longer on the home route) |
+| Marketing landing page | #8 (MOB-11) | `web/src/pages/LandingPage.tsx`, `LandingPage.css`, `LandingIcons.tsx`, `landingContent.ts` | Home route `/`: hero + search, skill-category bento, how-it-works, trending nomads, CTA, footer, mobile bottom nav; auth-aware top bar. Static placeholder content |
 | Local Docker stack   | #1 (MOB-1) | `docker-compose.yml`, `backend/Dockerfile`, `web/Dockerfile`                         | `docker compose up` boots mysql + backend + web, wired together      |
 | User accounts & auth | #3 (MOB-2), #7 (MOB-7) | `backend/routes/api.php`, `backend/app/Http/Controllers/Auth/*`, `backend/app/Notifications/ResetPasswordNotification.php` | Google SSO + email/password login & password recovery; reset email delivers via AWS SES in prod (pending SES provisioning — see OPERATIONS.md) |
 
