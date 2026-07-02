@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import './HealthStatus.css'
 
 type HealthState = 'loading' | 'connected' | 'unreachable'
 
