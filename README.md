@@ -5,10 +5,11 @@ or trading their work for goods, stays, or experiences. People list what they ca
 do (cooking, repairs, design, tutoring, farm work, knowledge sharing…), and locals
 or hosts hire or barter for it on the spot.
 
-> **This repository is the initial setup (MOB-1).** It contains the monorepo
-> foundation plus runnable skeletons for the backend and web, wired together with
-> Docker Compose. There is no product functionality yet — see
-> [`documentation/specs/2026-06-13-skillomat-initial-setup-design.md`](documentation/specs/2026-06-13-skillomat-initial-setup-design.md).
+> **Foundation stage.** The monorepo is wired together with Docker Compose and has
+> a runnable backend + web. Shipped so far: the health-check API, user accounts &
+> auth (Google SSO + email/password), and a marketing landing page at `/`. The
+> core marketplace (skill listings, hire/barter) is still to come — see the
+> [specs](documentation/specs/) and [`documentation/kb/FEATURES.md`](documentation/kb/FEATURES.md).
 
 ## Repository layout
 
@@ -47,9 +48,9 @@ This boots three services and wires them together:
 | `backend` | http://localhost:8080             | Laravel API (`/api/health`)                 |
 | `mysql`   | localhost:3306                    | MySQL 8.4 (db/user `skillomat`)             |
 
-Open **http://localhost:5174** — the page shows a status badge that turns green
-("Backend connected") once the web app reaches the backend and the backend reaches
-MySQL. You can also hit the API directly:
+Open **http://localhost:5174** — the web app serves the marketing landing page at
+`/` and the auth pages at `/login` and `/register`. To confirm the backend and
+MySQL are wired up, hit the API directly:
 
 ```bash
 curl http://localhost:8080/api/health
