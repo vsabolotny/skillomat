@@ -59,6 +59,13 @@ services:
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-central-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      # Google OAuth (MOB-13). Left empty by default so a host that hasn't set up
+      # a Google OAuth client still boots with Google sign-in disabled (see
+      # backend/config/services.php). GOOGLE_REDIRECT_URI must exactly match the
+      # redirect URI registered for the client in Google Cloud Console.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
     ports:
       # CloudFront's EC2 origin talks HTTP to host :80; nothing else can reach it
       # (security group allows :80 only from the CloudFront prefix list).
