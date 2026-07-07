@@ -144,6 +144,12 @@ Performed once in the AWS console / CLI (`AWS_PROFILE`), ~half a day:
    `AllViewerExceptHostHeader`); viewer protocol redirect→HTTPS; SPA fallback
    `403/404 → /index.html` (200). Note the `*.cloudfront.net` domain → fill into the
    host `.env` and restart the backend.
+6a. Google OAuth (MOB-13): once the CloudFront domain is known, create an OAuth
+   2.0 client at https://console.cloud.google.com/apis/credentials with
+   authorized redirect URI `https://<cloudfront-domain>/api/auth/google/callback`.
+   Set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` in the host
+   `.env` and restart the backend — `docker-compose.prod.yml` passes these through
+   to the container the same way it does `APP_URL`.
 7. IAM CI user `skillomat-ci-deploy` (least privilege: S3 put/delete on the bucket,
    `cloudfront:CreateInvalidation`, `ssm:SendCommand`/`GetCommandInvocation`).
 8. DLM policy: daily EBS snapshot, 7-day retention.
