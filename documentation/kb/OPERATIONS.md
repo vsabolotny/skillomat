@@ -1,6 +1,6 @@
 # Operations
 
-<!-- Last updated: 2026-06-18 (PR #5) -->
+<!-- Last updated: 2026-07-07 (PR #12) -->
 
 ## Local environment (Docker Compose)
 
@@ -79,7 +79,29 @@ baked into the image. `APP_ENV=production`, `APP_DEBUG=false`, and `APP_KEY` is
 **generated once and pinned** (never regenerated on deploy). The backend entrypoint
 caches config + routes when `APP_ENV=production`. Additional prod vars:
 `APP_URL` / `APP_FRONTEND_URL` (the CloudFront URL), `DB_ROOT_PASSWORD`, and the
-mail vars below.
+mail/Google vars below.
+
+**Every prod env var must be explicitly listed in `docker-compose.prod.yml`'s
+`environment:` block, not just set in the host `.env`.** Compose only forwards
+variables it declares — a value present in `/opt/skillomat/.env` but missing from
+the compose file's `environment:` map never reaches the container (see MOB-13
+below for the bug this caused).
+
+### Google OAuth (Socialite) — MOB-13
+
+Google sign-in reads `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI`
+(all three passed through `docker-compose.prod.yml`, defaulting to empty so a host
+without a Google OAuth client still boots with sign-in disabled). To enable it:
+
+1. Create an OAuth 2.0 client at https://console.cloud.google.com/apis/credentials
+   with authorized redirect URI `https://<cloudfront-domain>/api/auth/google/callback`
+   — it must match `GOOGLE_REDIRECT_URI` exactly, or Google rejects the request.
+2. Set the three vars in the host `/opt/skillomat/.env`.
+3. `docker compose -f docker-compose.prod.yml up -d backend` to pick them up.
+
+A `redirect_uri` that's present but wrong produces Google's `redirect_uri_mismatch`;
+a `redirect_uri` that never reached the container (the pre-MOB-13 bug) produces
+`invalid_request: missing required parameter: redirect_uri`.
 
 ### Email (SES) — MOB-7
 
