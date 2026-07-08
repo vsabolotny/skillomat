@@ -147,9 +147,11 @@ Performed once in the AWS console / CLI (`AWS_PROFILE`), ~half a day:
 6a. Google OAuth (MOB-13): once the CloudFront domain is known, create an OAuth
    2.0 client at https://console.cloud.google.com/apis/credentials with
    authorized redirect URI `https://<cloudfront-domain>/api/auth/google/callback`.
-   Set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` in the host
-   `.env` and restart the backend — `docker-compose.prod.yml` passes these through
-   to the container the same way it does `APP_URL`.
+   Set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` as GitHub
+   Actions repo secrets (`gh secret set <NAME>` — no manual host `.env` edit or
+   SSH needed). `deploy-backend.yml` syncs them into the host `.env` and restarts
+   the backend on every deploy; rotate a secret and the next deploy (or a manual
+   `workflow_dispatch`) picks it up.
 7. IAM CI user `skillomat-ci-deploy` (least privilege: S3 put/delete on the bucket,
    `cloudfront:CreateInvalidation`, `ssm:SendCommand`/`GetCommandInvocation`).
 8. DLM policy: daily EBS snapshot, 7-day retention.

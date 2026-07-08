@@ -96,8 +96,26 @@ without a Google OAuth client still boots with sign-in disabled). To enable it:
 1. Create an OAuth 2.0 client at https://console.cloud.google.com/apis/credentials
    with authorized redirect URI `https://<cloudfront-domain>/api/auth/google/callback`
    — it must match `GOOGLE_REDIRECT_URI` exactly, or Google rejects the request.
-2. Set the three vars in the host `/opt/skillomat/.env`.
-3. `docker compose -f docker-compose.prod.yml up -d backend` to pick them up.
+2. Set the three values as GitHub Actions repo secrets: `gh secret set GOOGLE_CLIENT_ID`
+   (and `_SECRET`, `_REDIRECT_URI`) — each prompts for the value, nothing echoes.
+3. `deploy-backend.yml` syncs them into the host `/opt/skillomat/.env` and restarts
+   the backend container on every deploy (see below) — no SSH or manual host edit
+   needed. To push a rotated secret without a code change, trigger the workflow
+   manually (`workflow_dispatch`).
+
+**How the sync works:** the "Deploy via SSM Send-Command" step builds an
+`export GOOGLE_...=...` prelude with jq's `@sh` filter (safe shell-quoting for
+any character the secret might contain), sends it as part of the SSM command
+script, and on the host greps out any existing `GOOGLE_*` lines from `.env`
+before appending fresh ones — idempotent, no duplicate lines across deploys.
+The write is bracketed with `set +x` so the values are never traced into
+SSM/CloudWatch command output; GitHub separately redacts any occurrence of
+these secret values from the Actions job log. Trade-off: the raw values still
+pass through the SSM `send-command` API call and land in AWS's own SSM run
+history (same AWS account, not public) — consistent with how `DB_PASSWORD`/
+`APP_KEY` are already handled (host `.env`, no Secrets Manager/Parameter Store
+layer). Revisit with SSM Parameter Store SecureString if tighter isolation is
+ever needed.
 
 A `redirect_uri` that's present but wrong produces Google's `redirect_uri_mismatch`;
 a `redirect_uri` that never reached the container (the pre-MOB-13 bug) produces

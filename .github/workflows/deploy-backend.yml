@@ -26,6 +26,10 @@ jobs:
           aws-region: eu-central-1
 
       - name: Deploy via SSM Send-Command
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
         run: |
           set -euo pipefail
 
@@ -35,12 +39,51 @@ jobs:
           # Build with the daemon's integrated BuildKit (DOCKER_BUILDKIT=1
           # docker build) rather than `compose build`: AL2023 doesn't ship the
           # standalone buildx CLI plugin that `compose build` requires.
+          #
+          # Google OAuth (MOB-13): GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI live as
+          # GitHub Actions secrets and are synced into the host .env on every
+          # deploy below, instead of requiring a manual SSH edit. The exports are
+          # built with jq's @sh filter for safe shell-quoting, and the write is
+          # bracketed with `set +x` so the values are never traced into SSM
+          # command output / CloudWatch. GitHub also redacts any occurrence of
+          # these secret values from this job's own logs.
+          GOOGLE_ENV_EXPORTS=$(jq -n \
+            --arg id "$GOOGLE_CLIENT_ID" \
+            --arg secret "$GOOGLE_CLIENT_SECRET" \
+            --arg uri "$GOOGLE_REDIRECT_URI" \
+            '"export GOOGLE_CLIENT_ID=" + ($id | @sh) + "\nexport GOOGLE_CLIENT_SECRET=" + ($secret | @sh) + "\nexport GOOGLE_REDIRECT_URI=" + ($uri | @sh)')
+
+          PARAMS=$(jq -nc \
+            --arg google_exports "$GOOGLE_ENV_EXPORTS" \
+            '{
+              commands: [
+                "set -euxo pipefail",
+                "cd /opt/skillomat",
+                "git fetch --all --prune",
+                "git reset --hard origin/main",
+                "set +x",
+                $google_exports,
+                "touch .env",
+                "grep -v -E \"^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_REDIRECT_URI)=\" .env > .env.new || true",
+                "printf \"GOOGLE_CLIENT_ID=%s\\nGOOGLE_CLIENT_SECRET=%s\\nGOOGLE_REDIRECT_URI=%s\\n\" \"$GOOGLE_CLIENT_ID\" \"$GOOGLE_CLIENT_SECRET\" \"$GOOGLE_REDIRECT_URI\" >> .env.new",
+                "mv .env.new .env",
+                "chmod 600 .env",
+                "set -x",
+                "DOCKER_BUILDKIT=1 docker build -t skillomat-backend:local ./backend",
+                "docker compose -f docker-compose.prod.yml up -d",
+                "sleep 15",
+                "curl -fsS --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1/api/health",
+                "docker image prune -f"
+              ],
+              executionTimeout: ["1500"]
+            }')
+
           CMD_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --comment "deploy-backend ${GITHUB_SHA::7}" \
             --timeout-seconds 1500 \
-            --parameters '{"commands":["set -euxo pipefail","cd /opt/skillomat","git fetch --all --prune","git reset --hard origin/main","DOCKER_BUILDKIT=1 docker build -t skillomat-backend:local ./backend","docker compose -f docker-compose.prod.yml up -d","sleep 15","curl -fsS --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1/api/health","docker image prune -f"],"executionTimeout":["1500"]}' \
+            --parameters "$PARAMS" \
             --query 'Command.CommandId' --output text)
 
           echo "CommandId: $CMD_ID"
