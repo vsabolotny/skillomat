@@ -42,19 +42,23 @@ jobs:
           #
           # Google OAuth (MOB-13): GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI live as
           # GitHub Actions secrets and are synced into the host .env on every
-          # deploy below, instead of requiring a manual SSH edit. The exports are
-          # built with jq's @sh filter for safe shell-quoting, and the write is
-          # bracketed with `set +x` so the values are never traced into SSM
-          # command output / CloudWatch. GitHub also redacts any occurrence of
-          # these secret values from this job's own logs.
-          GOOGLE_ENV_EXPORTS=$(jq -n \
-            --arg id "$GOOGLE_CLIENT_ID" \
-            --arg secret "$GOOGLE_CLIENT_SECRET" \
-            --arg uri "$GOOGLE_REDIRECT_URI" \
-            '"export GOOGLE_CLIENT_ID=" + ($id | @sh) + "\nexport GOOGLE_CLIENT_SECRET=" + ($secret | @sh) + "\nexport GOOGLE_REDIRECT_URI=" + ($uri | @sh)')
+          # deploy below, instead of requiring a manual SSH edit. Each export is
+          # its own "commands" array element (SSM's AWS-RunShellScript treats
+          # every element as one script line — embedding multiple lines' worth
+          # of text, joined by literal "\n", in a single element does NOT get
+          # split into multiple lines and breaks the script). Values are
+          # shell-quoted with jq's @sh filter, and the write is bracketed with
+          # `set +x` so they're never traced into SSM command output /
+          # CloudWatch. GitHub also redacts any occurrence of these secret
+          # values from this job's own logs.
+          GOOGLE_ID_EXPORT="export GOOGLE_CLIENT_ID=$(jq -nr --arg v "$GOOGLE_CLIENT_ID" '$v | @sh')"
+          GOOGLE_SECRET_EXPORT="export GOOGLE_CLIENT_SECRET=$(jq -nr --arg v "$GOOGLE_CLIENT_SECRET" '$v | @sh')"
+          GOOGLE_URI_EXPORT="export GOOGLE_REDIRECT_URI=$(jq -nr --arg v "$GOOGLE_REDIRECT_URI" '$v | @sh')"
 
           PARAMS=$(jq -nc \
-            --arg google_exports "$GOOGLE_ENV_EXPORTS" \
+            --arg id_export "$GOOGLE_ID_EXPORT" \
+            --arg secret_export "$GOOGLE_SECRET_EXPORT" \
+            --arg uri_export "$GOOGLE_URI_EXPORT" \
             '{
               commands: [
                 "set -euxo pipefail",
@@ -62,7 +66,9 @@ jobs:
                 "git fetch --all --prune",
                 "git reset --hard origin/main",
                 "set +x",
-                $google_exports,
+                $id_export,
+                $secret_export,
+                $uri_export,
                 "touch .env",
                 "grep -v -E \"^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_REDIRECT_URI)=\" .env > .env.new || true",
                 "printf \"GOOGLE_CLIENT_ID=%s\\nGOOGLE_CLIENT_SECRET=%s\\nGOOGLE_REDIRECT_URI=%s\\n\" \"$GOOGLE_CLIENT_ID\" \"$GOOGLE_CLIENT_SECRET\" \"$GOOGLE_REDIRECT_URI\" >> .env.new",
