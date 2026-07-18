@@ -1,6 +1,6 @@
 # Architecture
 
-<!-- Last updated: 2026-07-02 (PR #8) -->
+<!-- Last updated: 2026-07-03 (PR #10) -->
 
 Skillomat is a marketplace where travelers offer their skills for money, goods,
 stays, or experiences. This document describes the **current** state of the
@@ -51,6 +51,12 @@ MySQL responds to `SELECT 1`, or `{"status":"degraded","database":"unreachable"}
     CSS (`LandingPage.css`, design tokens as scoped variables) with inline-SVG
     icons (`LandingIcons.tsx`) and static content (`landingContent.ts`). The top
     bar is auth-aware via `useAuth`. Signed-out CTAs point to `/register` / `/login`.
+  - `/profile` → `ProfilePage.tsx` — user profile screen (top bar, profile hero
+    card, verified-skill chips, active-offer cards, stats bento, bottom nav). Same
+    idiom as the landing page: scoped plain CSS (`ProfilePage.css`), inline-SVG
+    icons (shared `LandingIcons.tsx`), and static content (`profileContent.ts`).
+    Mobile-first with a responsive desktop grid at ≥1024px. Not wired to a profile
+    API yet — content is placeholder demo data.
   - `/login`, `/register`, `/forgot-password`, `/reset-password`,
     `/auth/google/callback` — auth pages; shared styles in `pages/auth.css`.
 - **Components:** `web/src/components/HealthStatus.tsx` fetches `/api/health` on
